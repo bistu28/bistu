@@ -1,0 +1,149 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
+# Set visual style for clean, publication-ready plots
+sns.set_theme(style='whitegrid')
+
+# ==========================================
+# 0. GENERATE MULTI-DIMENSIONAL SAMPLE DATA
+# ==========================================
+np.random.seed(42)
+n_rows = 2000
+
+dates = pd.date_range(start='2025-01-01', end='2025-12-31', freq='D')
+regions = ['North', 'South', 'East', 'West']
+categories = ['Electronics', 'Clothing', 'Home & Kitchen']
+products = {
+    'Electronics': ['Laptop', 'Smartphone', 'Headphones'],
+    'Clothing': ['Jacket', 'Jeans', 'T-Shirt'],
+    'Home & Kitchen': ['Blender', 'Coffee Maker', 'Air Fryer'],
+}
+
+data = {
+    'Date': np.random.choice(dates, n_rows),
+    'Region': np.random.choice(regions, n_rows),
+    'Category': np.random.choice(categories, n_rows),
+}
+
+df = pd.DataFrame(data)
+df['Product'] = df.apply(
+    lambda row: np.random.choice(products[row['Category']]), axis=1
+)
+df['Sales'] = np.random.uniform(50, 1500, n_rows).round(2)
+df['Units'] = np.random.randint(1, 10, n_rows)
+df['Month'] = df['Date'].dt.to_period('M').astype(str)
+
+print('--- Original Dataset Preview ---')
+print(df.head(), '\n')
+
+
+# ==========================================
+# 1. SLICING (Filtering on a Single Dimension)
+# ==========================================
+# Slicing creates a sub-cube by fixing one dimension (e.g., Region = 'North')
+sliced_df = df[df['Region'] == 'North']
+
+plt.figure(figsize=(9, 4))
+sliced_df.groupby('Category')['Sales'].sum().plot(
+    kind='bar', color='skyblue', edgecolor='black'
+)
+plt.title(
+    'Slicing Operation: Total Sales in North Region by Product Category',
+    fontsize=12,
+    fontweight='bold',
+)
+plt.ylabel('Total Sales ($)')
+plt.xlabel('Category')
+plt.xticks(rotation=0)
+plt.tight_layout()
+plt.savefig('slicing_result.png', dpi=300)
+plt.close()
+
+
+# ==========================================
+# 2. DICING (Filtering on Multiple Dimensions)
+# ==========================================
+# Dicing selects a sub-cube by filtering across multiple dimensions simultaneously
+# (e.g., Region = 'North' AND Category = 'Electronics' in Q1 2025)
+diced_df = df[
+    (df['Region'] == 'North')
+    & (df['Category'] == 'Electronics')
+    & (df['Date'] >= '2025-01-01')
+    & (df['Date'] <= '2025-03-31')
+]
+
+plt.figure(figsize=(9, 4))
+diced_df.groupby('Product')['Sales'].sum().plot(
+    kind='barh', color='salmon', edgecolor='black'
+)
+plt.title(
+    'Dicing Operation: Electronics Sales in North Region (Q1 2025)',
+    fontsize=12,
+    fontweight='bold',
+)
+plt.xlabel('Total Sales ($)')
+plt.ylabel('Product')
+plt.tight_layout()
+plt.savefig('dicing_result.png', dpi=300)
+plt.close()
+
+
+# ==========================================
+# 3. ROLL-UP (Aggregating to Higher Summary Level)
+# ==========================================
+# Roll-up aggregates data from a detailed level to a higher summary level
+# (e.g., Daily transactions aggregated into Monthly Category totals)
+rolled_up_df = (
+    df.groupby(['Month', 'Category'])['Sales'].sum().unstack(fill_value=0)
+)
+
+plt.figure(figsize=(11, 5))
+rolled_up_df.plot(kind='line', marker='o', linewidth=2.5, ax=plt.gca())
+plt.title(
+    'Roll-Up Operation: Monthly Sales Trend Aggregated by Category',
+    fontsize=12,
+    fontweight='bold',
+)
+plt.ylabel('Total Sales ($)')
+plt.xlabel('Month')
+plt.legend(title='Category', bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.tight_layout()
+plt.savefig('rollup_result.png', dpi=300)
+plt.close()
+
+
+# ==========================================
+# 4. ROLL-DOWN / DRILL-DOWN (Granular Breakdown)
+# ==========================================
+# Roll-down / Drill-down takes summary data and breaks it down into granular components
+# (e.g., Expanding Category sales down to individual Product lines)
+rolled_down_df = (
+    df.groupby(['Category', 'Product'])['Sales'].sum().reset_index()
+)
+
+plt.figure(figsize=(11, 5))
+sns.barplot(
+    data=rolled_down_df,
+    x='Category',
+    y='Sales',
+    hue='Product',
+    palette='muted',
+    edgecolor='black',
+)
+plt.title(
+    'Roll-Down / Drill-Down Operation: Granular Product Breakdown within Categories',
+    fontsize=12,
+    fontweight='bold',
+)
+plt.ylabel('Total Sales ($)')
+plt.xlabel('Category')
+plt.legend(title='Product', bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.tight_layout()
+plt.savefig('rolldown_result.png', dpi=300)
+plt.close()
+
+print(
+    'All OLAP operations executed and visual charts saved successfully as PNG files!'
+)
